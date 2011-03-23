@@ -6,9 +6,9 @@ import datetime
 import baserequesthandler as base
 
 class FileRequestHandler(base.BaseRequestHandler):
-	def get(self, dir = ''):
-		dir = urllib.unquote(dir)
-		path = os.path.abspath(os.path.join(self.application.directory, dir))
+	def get(self, file):
+		file = urllib.unquote(file)
+		path = os.path.abspath(os.path.join(self.application.directory, file))
 
 		if not path.startswith(self.application.directory) or not os.path.isfile(path):
 			raise web.HTTPError(404)
@@ -18,21 +18,9 @@ class FileRequestHandler(base.BaseRequestHandler):
 		self.set_header("Last-Modified", datetime.datetime.utcfromtimestamp(info.st_mtime))
 		object_file = open(path, "r")
 		try:
-			self.renderJson({'contents': object_file.read()})
+			self.finish(object_file.read())
 		finally:
 			object_file.close()
-
-		"""
-		else:
-			if not os.path.isdir(path):
-				raise web.HTTPError(404)
-
-			files = os.listdir(self.application.directory)
-	
-			for f in files:
-				f = f[len(self.application.directory):]
-			self.renderJson({'contents': files})
-			"""
 
 	def post(self, path = ''):
 		self.put(path)
