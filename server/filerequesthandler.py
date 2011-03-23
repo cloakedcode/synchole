@@ -1,19 +1,11 @@
 from tornado import web
 from tornado import escape
-from tornado import ioloop
 import urllib
-import glob
-import os.path
+import os, os.path
 import datetime
+import baserequesthandler as base
 
-class JsonRequestHandler(web.RequestHandler):
-	def _renderJson(self, obj):
-			callback = self.get_argument('callback', 'callback')
-			
-			self.set_header("Content-Type", "text/javascript")
-			self.finish(callback+'('+escape.json_encode(obj)+')')
-
-class FileHandler(JsonRequestHandler):
+class FileRequestHandler(base.BaseRequestHandler):
 	def get(self, dir = ''):
 		dir = urllib.unquote(dir)
 		path = os.path.abspath(os.path.join(self.application.directory, dir))
@@ -26,11 +18,12 @@ class FileHandler(JsonRequestHandler):
 		self.set_header("Last-Modified", datetime.datetime.utcfromtimestamp(info.st_mtime))
 		object_file = open(path, "r")
 		try:
-			self._renderJson({'contents': object_file.read()})
+			self.renderJson({'contents': object_file.read()})
 		finally:
 			object_file.close()
 
-		"""else:
+		"""
+		else:
 			if not os.path.isdir(path):
 				raise web.HTTPError(404)
 
@@ -38,7 +31,7 @@ class FileHandler(JsonRequestHandler):
 	
 			for f in files:
 				f = f[len(self.application.directory):]
-			self._renderJson({'contents': files})
+			self.renderJson({'contents': files})
 			"""
 
 	def post(self, path = ''):
@@ -71,21 +64,3 @@ class FileHandler(JsonRequestHandler):
 				object_file.close()
 
 		self.finish()
-
-class SyncHoleApplication(web.Application):
-	def __init__(self, root_directory):
-		web.Application.__init__(self, [
-				#(r"/", RootHandler),
-				(r"/files", FileHandler),
-				(r"/files/(.*)", FileHandler),
-			])
-
-		self.directory = os.path.abspath(root_directory)
-		if not os.path.exists(self.directory):
-			os.makedirs(self.directory)
-
-application = SyncHoleApplication('/Users/alan/Hole')
-
-if __name__ == "__main__":
-	application.listen(8888)
-	ioloop.IOLoop.instance().start()
